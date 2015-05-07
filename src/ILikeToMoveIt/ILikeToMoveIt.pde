@@ -20,6 +20,8 @@ PImage newImg;
 //final static String sketchDirectory = "/Users/mdavis/code/perpetualmotionio/i-like-to-move-it/src/ILikeToMoveIt/";
 final static String sketchDirectory = "/Users/ryankanno/Desktop/PerpetualMotion/Processing/projects/i-like-to-move-it/src/ILikeToMoveIt/";
 final boolean shouldScreenCapture = false;
+final static int screenWidth = 640;
+final static int screenHeight = 480;
 
 
 // DO NOT CHANGE
@@ -30,6 +32,10 @@ boolean isCurrentlyScreenCapturing = false;
 String timestamp;
 float lengthOfCapture = 0;
 int screenCaptureTimer = 0;
+final static int kinectWidth = 640;
+final static int kinectHeight = 480;
+
+final static int numDots = 5000;
 
 color[] appleNeonColors = {
   color(33,121,255),   // neon blue
@@ -50,13 +56,13 @@ static public void main(String args[]) {
 
 void setup() {
 
-  size(640, 480);
+  size(screenWidth, screenHeight);
 
   currIndexTime = getRandomTime(5000, 15000);
   setupKinect();
 
   audVis = new AudioVisualization();
-  newImg = new PImage(width, height);
+  newImg = new PImage(kinectWidth, kinectHeight);
   img = new PImage(width, height);
   minim = new Minim(this);
 
@@ -67,7 +73,7 @@ void setup() {
   f = createFont("Helvetica", 32, true);
   background(0);
 
-  for (int i=0; i<1000; i++) {
+  for (int i=0; i < numDots; i++) {
     fill(229, 107, 7, random(10, 255));
     ellipse(random(0, width), random(0, height), 4, 4);
   }
@@ -109,36 +115,35 @@ void draw() {
 
   int[] userVals = kinect.userMap();
   if(userVals == null) return;
-  
+
   int[] imgpix = newImg.pixels;
-  
+
   int idx;
   int val;
-  int maxidx = width * height;
+  int maxidx = kinectWidth * kinectHeight;
   color background = appleNeonColors[currIndex];
   color pix;
+
   for (idx = 0; idx < maxidx; ++idx){
     val = userVals[idx];
-    
+
     if (val != 0) {
       pix = pixels[idx];
     } else {
       pix = background;
     }
-    
+
     imgpix[idx] = pix;
-   
   }
 
   if (millis() - timer >= currIndexTime) {
     currIndexTime = getRandomTime(5000, 10000);
     currIndex = (currIndex+1) % appleNeonColors.length;
-    //currIndex = (int)random(0, appleNeonColors.length);
     timer = millis();
   }
 
   newImg.updatePixels();
-  image(newImg, 0, 0);
+  image(newImg, 0, 0, screenWidth, screenHeight);
 
   screenCapture();
 }
