@@ -14,9 +14,21 @@ int index;
 PImage img;
 PImage newImg;
 
+color[] appleNeonColors = {
+  color(33,121,255), // neon blue
+  color(118,185,0),  // puke green
+  color(223,153,0),  // yellow
+  color(212,41,66),  // hot pink
+};
+
+int currIndex = 0;
+float currIndexTime = 0;
+int timer = 0;
+
 void setup() {
 
   size(640, 480);
+  currIndexTime = getRandomTime(5000, 15000);
   setupKinect();
 
   audVis = new AudioVisualization();
@@ -58,6 +70,10 @@ void setupKinect() {
   kinect.enableUser();
 }
 
+float getRandomTime(int minTime, int maxTime) {
+  return random(minTime, maxTime);
+}
+
 void draw() {
   background(img);
   audVis.draw();
@@ -77,9 +93,15 @@ void draw() {
         newImg.pixels[dispIndex] = pixels[dispIndex];
       }
       else {
-        newImg.pixels[dispIndex] = color(101,199,7);
+        newImg.pixels[dispIndex] = appleNeonColors[currIndex];
       }
     }
+  }
+
+  if (millis() - timer >= currIndexTime) {
+    currIndexTime = getRandomTime(5000, 10000);
+    currIndex = (int)random(0, appleNeonColors.length);
+    timer = millis();
   }
 
   newImg.updatePixels();
