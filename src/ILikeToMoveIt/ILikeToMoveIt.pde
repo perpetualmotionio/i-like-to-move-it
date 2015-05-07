@@ -16,10 +16,12 @@ PFont f;
 PImage img;
 PImage newImg;
 
-// PLEASE CHANGE THIS
+// !!!!!!! PLEASE CHANGE !!!!!!!
 final static String sketchDirectory = "/Users/ryankanno/Desktop/PerpetualMotion/Processing/projects/i-like-to-move-it/src/ILikeToMoveIt/";
-
 final boolean shouldScreenCapture = false;
+
+
+// DO NOT CHANGE
 final String saveDirectory = "/Users/ryankanno/Projects/Makerfaire/i-like-to-move-it-images/";
 final int milliSecondsBetweenScreenCaptures = 20000;
 boolean isCurrentlyScreenCapturing = false;
