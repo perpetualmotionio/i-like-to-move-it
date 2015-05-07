@@ -8,4 +8,11 @@ Kinect demo, [Danice-ize](https://github.com/dGrandesign/Dance-ize).
 
 ## Todo
 
+## Changelog
+
+### 2015-05-07
+
 * Add color array of early Apple videos
+* Add frame capture
+* Add gif generation
+* Add tweeting capability
