@@ -1,6 +1,5 @@
 import ddf.minim.*;
 import ddf.minim.analysis.*;
-
 import SimpleOpenNI.*;
 
 AudioVisualization audVis;
@@ -11,14 +10,24 @@ FFT fft;
 
 int kinIndex, dispIndex;
 int index;
+PFont f;
 PImage img;
 PImage newImg;
 
+final boolean shouldScreenCapture = true;
+final String saveDirectory = "/Users/ryankanno/Projects/Makerfaire/i-like-to-move-it-images/";
+final int milliSecondsBetweenScreenCaptures = 30000;
+boolean isCurrentlyScreenCapturing = false;
+String timestamp;
+float lengthOfCapture = 0;
+int screenCaptureTimer = 0;
+
 color[] appleNeonColors = {
   color(33,121,255), // neon blue
-  color(118,185,0),  // puke green
+  color(116,172,0),  // puke green
   color(223,153,0),  // yellow
   color(212,41,66),  // hot pink
+  color(149,106,222),  // purnurple
 };
 
 int currIndex = 0;
@@ -38,6 +47,8 @@ void setup() {
 
   player = minim.loadFile("song.mp3", 512);
   player.play();
+
+  f = createFont("Helvetica", 32, true);
 
   fft = new FFT(player.bufferSize(), player.sampleRate());
   background(0);
@@ -106,6 +117,60 @@ void draw() {
 
   newImg.updatePixels();
   image(newImg, 0, 0);
+
+  screenCapture();
+}
+
+void screenCapture() {
+  if (!isCurrentlyScreenCapturing) {
+    if (millis() - screenCaptureTimer >= milliSecondsBetweenScreenCaptures) {
+      timestamp = year() + nf(month(),2) + nf(day(),2) + "-"  + nf(hour(),2) + nf(minute(),2) + nf(second(),2);
+      isCurrentlyScreenCapturing = true;
+      lengthOfCapture = getRandomTime(5000, 10000);
+      screenCaptureTimer = millis();
+    } else if (millis() - screenCaptureTimer >= milliSecondsBetweenScreenCaptures - 1000) {
+      textFont(f,32);
+      fill(color(255,0,0));
+      text("1", width - 40, 50);
+
+      stroke(color(255, 0, 0));
+      strokeWeight(20);
+      noFill();
+      rect(0, 0, width, height);
+    } else if (millis() - screenCaptureTimer >= milliSecondsBetweenScreenCaptures - 2000) {
+      textFont(f,32);
+      fill(color(255,0,0));
+      text("2", width - 40, 50);
+    } else if (millis() - screenCaptureTimer >= milliSecondsBetweenScreenCaptures - 3000) {
+      textFont(f,32);
+      fill(color(255,0,0));
+      text("3", width - 40, 50);
+    } else if (millis() - screenCaptureTimer >= milliSecondsBetweenScreenCaptures - 4000) {
+      textFont(f,32);
+      fill(color(255,0,0));
+      text("4", width - 40, 50);
+    } else if (millis() - screenCaptureTimer >= milliSecondsBetweenScreenCaptures - 5000) {
+      textFont(f,32);
+      fill(color(255,0,0));
+      text("5", width - 40, 50);
+    }
+  } else {
+    if (shouldScreenCapture) {
+      if (lengthOfCapture > millis() - screenCaptureTimer) {
+        if (frameCount % 4 == 0)
+        {
+            ThreadedImage frame = new ThreadedImage(width, height, RGB, saveDirectory + timestamp + "/frame_" + nf(frameCount, 3) + ".png");
+            frame.set(0,0,get());
+            frame.save();
+        }
+      } else {
+        PrintWriter output = createWriter(saveDirectory + timestamp + "/DONE");
+        output.close();
+        isCurrentlyScreenCapturing = false;
+        screenCaptureTimer = millis();
+      }
+    }
+  }
 }
 
 void stop() {

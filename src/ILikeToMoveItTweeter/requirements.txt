@@ -1,0 +1,13 @@
+argh==0.26.1
+imgurpython==1.1.6
+numpy==1.9.2
+oauthlib==0.7.2
+pathtools==0.1.2
+Pillow==2.8.1
+PyOpenGL==3.1.0
+PyYAML==3.11
+requests==2.7.0
+requests-oauthlib==0.5.0
+twython==3.2.0
+visvis==1.9.1
+watchdog==0.8.3
