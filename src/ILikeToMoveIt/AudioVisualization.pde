@@ -46,27 +46,30 @@ class AudioVisualization {
 
   void draw(){
     noStroke();
-    fft.forward(player.left);
-    for (int i=1; i < 200; i++) {
-      if (timer < 0) {
-        pos[i].x = random(0,width);
-        pos[i].y = random(0,height);
-      }
-      pushMatrix();
-
-      translate(pos[i].x,pos[i].y);
-
-      for(int n=0; n<70; n++) {
-        fill(pColor[i], fft.getBand(i) * 2.5);
-        ellipse(random(-fft.getBand(i) * 2, fft.getBand(i)*2), random(-fft.getBand(i)*2,fft.getBand(i)*2), radius[i], radius[i] ); 
-      }
-      popMatrix();
-    }
-
-    if(timer < 0)
+    if (null != fft)
     {
-      timer=50;
+      fft.forward(player.left);
+      for (int i=1; i < 200; i++) {
+        if (timer < 0) {
+          pos[i].x = random(0,width);
+          pos[i].y = random(0,height);
+        }
+        pushMatrix();
+
+        translate(pos[i].x,pos[i].y);
+
+        for(int n=0; n<70; n++) {
+          fill(pColor[i], fft.getBand(i) * 2.5);
+          ellipse(random(-fft.getBand(i) * 2, fft.getBand(i)*2), random(-fft.getBand(i)*2,fft.getBand(i)*2), radius[i], radius[i] ); 
+        }
+        popMatrix();
+      }
+
+      if(timer < 0)
+      {
+        timer=50;
+      }
+      timer--;
     }
-    timer--;
   }
 }

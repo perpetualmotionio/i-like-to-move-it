@@ -1,6 +1,8 @@
 import ddf.minim.*;
 import ddf.minim.analysis.*;
 import SimpleOpenNI.*;
+import java.io.*;
+import java.util.Arrays;
 
 AudioVisualization audVis;
 SimpleOpenNI kinect;
@@ -14,19 +16,22 @@ PFont f;
 PImage img;
 PImage newImg;
 
-final boolean shouldScreenCapture = true;
+// PLEASE CHANGE THIS
+final static String sketchDirectory = "/Users/ryankanno/Desktop/PerpetualMotion/Processing/projects/i-like-to-move-it/src/ILikeToMoveIt/";
+
+final boolean shouldScreenCapture = false;
 final String saveDirectory = "/Users/ryankanno/Projects/Makerfaire/i-like-to-move-it-images/";
-final int milliSecondsBetweenScreenCaptures = 30000;
+final int milliSecondsBetweenScreenCaptures = 20000;
 boolean isCurrentlyScreenCapturing = false;
 String timestamp;
 float lengthOfCapture = 0;
 int screenCaptureTimer = 0;
 
 color[] appleNeonColors = {
-  color(33,121,255), // neon blue
-  color(116,172,0),  // puke green
-  color(223,153,0),  // yellow
-  color(212,41,66),  // hot pink
+  color(33,121,255),   // neon blue
+  color(116,172,0),    // puke green
+  color(223,153,0),    // yellow
+  color(212,41,66),    // hot pink
   color(149,106,222),  // purnurple
 };
 
@@ -34,9 +39,15 @@ int currIndex = 0;
 float currIndexTime = 0;
 int timer = 0;
 
+static public void main(String args[]) {
+   String[] customArgs = new String[] { "--sketch-path=" + sketchDirectory, "--full-screen", "--bgcolor=#000000", "--hide-stop", "ILikeToMoveIt" };
+   PApplet.main(concat(args, customArgs));
+}
+
 void setup() {
 
   size(640, 480);
+
   currIndexTime = getRandomTime(5000, 15000);
   setupKinect();
 
@@ -47,10 +58,9 @@ void setup() {
 
   player = minim.loadFile("song.mp3", 512);
   player.play();
+  fft = new FFT(player.bufferSize(), player.sampleRate());
 
   f = createFont("Helvetica", 32, true);
-
-  fft = new FFT(player.bufferSize(), player.sampleRate());
   background(0);
 
   for (int i=0; i<1000; i++) {
