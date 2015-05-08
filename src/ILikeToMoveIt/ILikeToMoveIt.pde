@@ -19,7 +19,7 @@ PImage newImg;
 // !!!!!!! PLEASE CHANGE !!!!!!!
 //final static String sketchDirectory = "/Users/mdavis/code/perpetualmotionio/i-like-to-move-it/src/ILikeToMoveIt/";
 final static String sketchDirectory = "/Users/ryankanno/Desktop/PerpetualMotion/Processing/projects/i-like-to-move-it/src/ILikeToMoveIt/";
-final boolean shouldScreenCapture = false;
+final boolean shouldScreenCapture = true;
 final static int screenWidth = 640;
 final static int screenHeight = 480;
 
@@ -27,7 +27,7 @@ final static int screenHeight = 480;
 // DO NOT CHANGE
 //final String saveDirectory = "/Users/mdavis/Desktop/i-like-to-move-it-images/";
 final String saveDirectory = "/Users/ryankanno/Projects/Makerfaire/i-like-to-move-it-images/";
-final int milliSecondsBetweenScreenCaptures = 20 * 1000;
+final int milliSecondsBetweenScreenCaptures = 30 * 1000;
 boolean isCurrentlyScreenCapturing = false;
 String timestamp;
 float lengthOfCapture = 0;
