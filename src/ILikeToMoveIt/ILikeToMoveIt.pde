@@ -164,10 +164,10 @@ void screenCapture() {
     if (mills_left > 0) {
       timestamp = year() + nf(month(),2) + nf(day(),2) + "-"  + nf(hour(),2) + nf(minute(),2) + nf(second(),2);
       isCurrentlyScreenCapturing = true;
-      lengthOfCapture = getRandomTime(5000, 10000);
+      lengthOfCapture = getRandomTime(7000, 14000);
       screenCaptureTimer = millis();
     } else if (mills_left >= -1000) {
-      msg = "1";  
+      msg = "1";
       noFill();
       stroke(textcolor);
       strokeWeight(20);
