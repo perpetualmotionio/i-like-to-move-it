@@ -16,6 +16,7 @@ from images2gif import writeGif
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.events import LoggingEventHandler
+import argparse
 
 
 IMAGE_PATH = '/Users/ryankanno/Projects/Makerfaire/i-like-to-move-it-images/'
@@ -45,7 +46,10 @@ class ImageHandler(PatternMatchingEventHandler):
             filename = parent_dir + "/output.gif"
             writeGif(filename, images, duration=0.2)
             with open(filename, 'rb') as gif:
-                tweet(CONFIG, get_random_tweet_quote(), photo=gif)
+                quote = get_random_tweet_quote();
+                logging.info("tweeting quote: {0}".format(quote))
+                tweet(CONFIG, quote, photo=gif)
+
             shutil.move(parent_dir + "/", IMAGE_PROCESSED_PATH)
 
     def on_modified(self, event):
@@ -55,9 +59,25 @@ class ImageHandler(PatternMatchingEventHandler):
         self.process(event)
 
 
+def parse_options():
+    global IMAGE_PATH
+    global IMAGE_PROCESSED_PATH
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image-path", dest="image_path", default=IMAGE_PATH)
+    parser.add_argument("--processed-path", dest="image_processed_path", default=IMAGE_PROCESSED_PATH)
+    opts = parser.parse_args();
+
+    IMAGE_PATH = opts.image_path
+    IMAGE_PROCESSED_PATH = opts.image_processed_path
+
+    logging.info("IMAGE_PATH={0}".format(IMAGE_PATH));
+    logging.info("IMAGE_PROCESSED_PATH={0}".format(IMAGE_PROCESSED_PATH));
+
 def main():
 
     logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
+
+    parse_options();
 
     try:
         observer = Observer()
