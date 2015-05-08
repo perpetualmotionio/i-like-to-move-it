@@ -58,6 +58,8 @@ void setup() {
 
   size(screenWidth, screenHeight);
 
+  noCursor();
+
   currIndexTime = getRandomTime(5000, 15000);
   setupKinect();
 
