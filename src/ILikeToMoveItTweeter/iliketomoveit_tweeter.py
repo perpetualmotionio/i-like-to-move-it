@@ -19,7 +19,7 @@ from watchdog.events import LoggingEventHandler
 
 
 IMAGE_PATH = '/Users/ryankanno/Projects/Makerfaire/i-like-to-move-it-images/'
-IMAGE_PROCESSED_PATH = '/Users/ryankanno/Projects/Makerfaire/let-it-rain-images-processed/'
+IMAGE_PROCESSED_PATH = '/Users/ryankanno/Projects/Makerfaire/i-like-to-move-it-images-processed/'
 
 LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
 
