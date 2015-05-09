@@ -5,6 +5,7 @@ import java.io.*;
 import java.util.Arrays;
 
 AudioVisualization audVis;
+AudioVisualization2 audVis2;
 SimpleOpenNI kinect;
 Minim minim;
 AudioPlayer player;
@@ -112,10 +113,11 @@ void setup() {
   imgDepthFrameGeneration = new PImage(kinectWidth, kinectHeight);
   minim = new Minim(this);
 
-  player = minim.loadFile("song.mp3", 16*1024);
+  player = minim.loadFile("song.mp3", 512);
   player.play();
   fft = new FFT(player.bufferSize(), player.sampleRate());
 
+  audVis2 = new AudioVisualization2();
   f = createFont("Helvetica", 64, true);
 
   imgSilhouetteBackground = createStaticSilhouetteImage();
@@ -274,6 +276,7 @@ void checkAndUpdateBackgroundColor() {
 void draw() {
   background(imgSilhouetteBackground);
   audVis.draw();
+  //audVis2.draw();
 
   checkAndUpdateBackgroundColor();
 
