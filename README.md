@@ -10,6 +10,13 @@ Kinect demo, [Danice-ize](https://github.com/dGrandesign/Dance-ize).
 
 ## Changelog
 
+### 2015-05-08
+
+* Added logo display after capture
+* Display flashing "RECORDING" during capture
+* Simplfy capture logic
+
+
 ### 2015-05-07
 
 * Added color array of early Apple videos

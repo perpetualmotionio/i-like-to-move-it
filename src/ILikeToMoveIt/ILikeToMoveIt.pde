@@ -15,35 +15,41 @@ int index;
 PFont f;
 PImage img;
 PImage newImg;
-
 PImage imgLogo;
 
 
-final static int MS_LOGO_FLASH_PERIOD = 30 * 1000;
-final static int MS_LOGO_FLASH_LENGTH = 5 * 1000;
 
 
 // !!!!!!! PLEASE CHANGE !!!!!!!
-//final static String sketchDirectory = "/Users/mdavis/code/perpetualmotionio/i-like-to-move-it/src/ILikeToMoveIt/";
 final static String sketchDirectory = "/Users/ryankanno/Desktop/PerpetualMotion/Processing/projects/i-like-to-move-it/src/ILikeToMoveIt/";
-final boolean shouldScreenCapture = true;
-final static int screenWidth = 640;
-final static int screenHeight = 480;
-
-
-// DO NOT CHANGE
-//final String saveDirectory = "/Users/mdavis/Desktop/i-like-to-move-it/images/";
 final String saveDirectory = "/Users/ryankanno/Projects/Makerfaire/i-like-to-move-it-images/";
-final int milliSecondsBetweenScreenCaptures = 30 * 1000;
-boolean isCurrentlyScreenCapturing = false;
-String timestamp;
-float lengthOfCapture = 0;
-int screenCaptureTimer = 0;
+//final static String sketchDirectory = "/Users/mdavis/code/perpetualmotionio/i-like-to-move-it/src/ILikeToMoveIt/";
+//final String saveDirectory = "/Users/mdavis/Desktop/i-like-to-move-it/images/";
 
+
+final static int screenWidth = 640*3/2;
+final static int screenHeight = 480*3/2;
 final static int kinectWidth = 640;
 final static int kinectHeight = 480;
 
 final static int numDots = 5000;
+
+
+// 0 = normal display
+// 1 = display tweet countdown
+// 2 = capture tweet
+// 3 = display logo
+int captureMode = 0;
+int captureModeEndTime = 0;
+String captureDirectory;
+
+final static int MS_IDLE_MIN = 10 * 1000;
+final static int MS_IDLE_MAX = 30 * 1000;
+final static int MS_LOGO_FLASH_LENGTH = 10 * 1000;
+final static int MS_COUNTDOWN = 5 * 1000;
+final static int MS_CAPTURE_MIN = 7 * 1000;
+final static int MS_CAPTURE_MAX = 14 * 1000;
+
 
 color[] appleNeonColors = {
   color(33,121,255),   // neon blue
@@ -62,10 +68,21 @@ static public void main(String args[]) {
   PApplet.main(concat(args, customArgs));
 }
 
-
-boolean sketchFullScreen()
-{
+boolean sketchFullScreen() {
   return true;
+}
+
+
+PImage createShilouetteImage() {
+  background(0);
+
+  for (int i=0; i < numDots; i++) {
+    fill(229, 107, 7, random(10, 255));
+    ellipse(random(0, width), random(0, height), 4, 4);
+  }
+  loadPixels();
+
+  return get();
 }
 
 
@@ -92,23 +109,13 @@ void setup() {
   player.play();
   fft = new FFT(player.bufferSize(), player.sampleRate());
 
-  f = createFont("Helvetica", 32, true);
-  background(0);
+  f = createFont("Helvetica", 64, true);
 
-  for (int i=0; i < numDots; i++) {
-    fill(229, 107, 7, random(10, 255));
-    ellipse(random(0, width), random(0, height), 4, 4);
-  }
-  loadPixels();
+  img = createShilouetteImage();
 
-  for (int y=0; y<height; y++) {
-    for (int x=0; x<width; x++) {
-      index=x+y*width;
-      img.pixels[index]= pixels[index];
-    }
-  }
-  img.updatePixels();
+  captureMode = -1;
 }
+
 
 void setupKinect() {
   kinect = new SimpleOpenNI(this);
@@ -123,8 +130,9 @@ void setupKinect() {
   kinect.enableUser();
 }
 
-float getRandomTime(int minTime, int maxTime) {
-  return random(minTime, maxTime);
+
+int getRandomTime(int minTime, int maxTime) {
+  return int(random(minTime, maxTime));
 }
 
 
@@ -145,16 +153,44 @@ void blendImageCenter(PImage blendImg, float scale) {
   blend(blendImg, 0, 0, iw, ih, width/2 - w/2, height/2 - h/2, w, h, BLEND);
 }
 
-void draw() {
 
+
+int getCurrentCaptureMode(){
   int ms = millis();
 
+  // return early if timer for next mode is not elapsed
+  if(ms < captureModeEndTime){
+    return captureMode;
+  }
+
+  int modeLength;
+  ++captureMode;
+
+  if(captureMode == 1){
+    modeLength = MS_COUNTDOWN;
+  } else if(captureMode == 2){
+    startScreenCapture();
+    modeLength = getRandomTime(MS_CAPTURE_MIN, MS_CAPTURE_MAX);
+  } else if(captureMode == 3) {
+    finishScreenCapture();
+    modeLength =  MS_LOGO_FLASH_LENGTH;
+  } else {
+    captureMode = 0;
+    modeLength = getRandomTime(MS_IDLE_MIN, MS_IDLE_MAX);
+  }
+
+  captureModeEndTime = ms + modeLength;
+  return captureMode;
+}
+
+
+
+void draw() {
   background(img);
   audVis.draw();
   kinect.update();
 
   loadPixels();
-  updatePixels();
 
   int[] userVals = kinect.userMap();
   if(userVals == null) return;
@@ -188,72 +224,77 @@ void draw() {
   newImg.updatePixels();
   image(newImg, 0, 0, screenWidth, screenHeight);
 
-  if((ms % MS_LOGO_FLASH_PERIOD) < MS_LOGO_FLASH_LENGTH) {
-    blendImageCenter(imgLogo, 0.75);
+
+  switch(getCurrentCaptureMode()){
+  case 1: displayCountdown(); break;
+  case 2: doScreenCapture(); break;
+  case 3: blendImageCenter(imgLogo, 0.75); break;
+  default: break;
   }
-
-
-  screenCapture();
 }
 
-void screenCapture() {
+
+// called when mode switches to capture
+void startScreenCapture() {
+  captureDirectory = saveDirectory + year() + nf(month(),2) + nf(day(),2) + "-"  + nf(hour(),2) + nf(minute(),2) + nf(second(),2);
+}
+
+
+// called when mode switches to logo
+void finishScreenCapture() {
+  PrintWriter output = createWriter(captureDirectory + "/DONE");
+  output.close();
+}
+
+
+// called in draw() when mode is capture
+void doScreenCapture() {
+  if (frameCount % 4 == 0)
+  {
+    ThreadedImage frame = new ThreadedImage(width, height, RGB, captureDirectory + "/frame_" + nf(frameCount, 3) + ".png");
+    frame.set(0,0,get());
+    frame.save();
+  } else {
+    displayMsgAndFrame(getTextcolor(), "RECORDING", 30);
+  }
+}
+
+
+color getTextcolor() {
   color bg = appleNeonColors[currIndex];
   int a = (bg>>24)&255;
   int r = (bg>>16)&255;
   int g = (bg>>8)&255;
   int b = (bg>>0)&255;
-
   color textcolor = color(255 - r, 255 - g, 255 - b, 255);
-  String msg = "";
-  if (!isCurrentlyScreenCapturing) {
+  return textcolor;
+}
+
+
+void displayMsgAndFrame(color textcolor, String msg, int frameWidth){
+  if(frameWidth > 0) {
+    noFill();
     stroke(textcolor);
-    int mills_left = millis() - screenCaptureTimer - milliSecondsBetweenScreenCaptures;
+    strokeWeight(frameWidth);
+    rect(0, 0, width, height);
+  }
 
-    if (mills_left > 0) {
-      timestamp = year() + nf(month(),2) + nf(day(),2) + "-"  + nf(hour(),2) + nf(minute(),2) + nf(second(),2);
-      isCurrentlyScreenCapturing = true;
-      lengthOfCapture = getRandomTime(7000, 14000);
-      screenCaptureTimer = millis();
-    } else if (mills_left >= -1000) {
-      msg = "1";
-      noFill();
-      stroke(textcolor);
-      strokeWeight(20);
-      rect(0, 0, width, height);
-    } else if (mills_left >= -2000) {
-      msg = "2";
-    } else if (mills_left >= -3000) {
-      msg = "3";
-    } else if (mills_left >= -4000) {
-      msg = "4";
-    } else if (mills_left >= -5000) {
-      msg = "5";
-    }
-
-    if(msg != ""){
-      textFont(f,32);
-      fill(textcolor);
-      text(msg, width - 40, 50);
-    }
-
-  } else {
-    if (shouldScreenCapture) {
-      if (lengthOfCapture > millis() - screenCaptureTimer) {
-        if (frameCount % 4 == 0)
-        {
-            ThreadedImage frame = new ThreadedImage(width, height, RGB, saveDirectory + timestamp + "/frame_" + nf(frameCount, 3) + ".png");
-            frame.set(0,0,get());
-            frame.save();
-        }
-      } else {
-        PrintWriter output = createWriter(saveDirectory + timestamp + "/DONE");
-        output.close();
-        isCurrentlyScreenCapturing = false;
-        screenCaptureTimer = millis();
-      }
-    }
+  if(msg != ""){
+    textFont(f,32);
+    stroke(textcolor);
+    fill(textcolor);
+    text(msg, 50, 50);
   }
 }
+
+
+void displayCountdown(){
+  float seconds = (captureModeEndTime - millis()) * 0.001;
+  String msg = "Get ready to tweet in " + nf(int(seconds)+1,1) + " seconds!";
+  int frameWid = int(seconds) * 10;
+  displayMsgAndFrame(getTextcolor(), msg, frameWid);
+}
+
 
 void stop() {
   player.close();
