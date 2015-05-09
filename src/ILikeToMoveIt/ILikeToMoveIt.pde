@@ -13,18 +13,19 @@ FFT fft;
 int kinIndex, dispIndex;
 int index;
 PFont f;
-PImage img;
-PImage newImg;
+PImage imgSilhouetteBackground;
 PImage imgLogo;
+PImage imgKinectDepth;
+PImage imgDepthFrameGeneration;
 
 
 
 
 // !!!!!!! PLEASE CHANGE !!!!!!!
-final static String sketchDirectory = "/Users/ryankanno/Desktop/PerpetualMotion/Processing/projects/i-like-to-move-it/src/ILikeToMoveIt/";
-final String saveDirectory = "/Users/ryankanno/Projects/Makerfaire/i-like-to-move-it-images/";
-//final static String sketchDirectory = "/Users/mdavis/code/perpetualmotionio/i-like-to-move-it/src/ILikeToMoveIt/";
-//final String saveDirectory = "/Users/mdavis/Desktop/i-like-to-move-it/images/";
+//final static String sketchDirectory = "/Users/ryankanno/Desktop/PerpetualMotion/Processing/projects/i-like-to-move-it/src/ILikeToMoveIt/";
+//final String saveDirectory = "/Users/ryankanno/Projects/Makerfaire/i-like-to-move-it-images/";
+final static String sketchDirectory = "/Users/mdavis/code/perpetualmotionio/i-like-to-move-it/src/ILikeToMoveIt/";
+final String saveDirectory = "/Users/mdavis/Desktop/i-like-to-move-it/images/";
 
 
 final static int screenWidth = 640*3/2;
@@ -51,17 +52,25 @@ final static int MS_CAPTURE_MIN = 7 * 1000;
 final static int MS_CAPTURE_MAX = 14 * 1000;
 
 
-color[] appleNeonColors = {
-  color(33,121,255),   // neon blue
-  color(116,172,0),    // puke green
-  color(223,153,0),    // yellow
-  color(212,41,66),    // hot pink
-  color(149,106,222),  // purnurple
+// if USER_DEPTH_MAX = 0, the OpenNI user map is used instead
+// otherwise the range [0, USER_DEPTH_MAX] will be in silhouette
+final static int USER_DEPTH_MAX = 0;
+
+final static int DILATE_ERODE = 0;
+
+final static int TRACER_COUNT = 3;
+
+
+final static color[][] appleNeonColors = {
+  { 33 , 121, 255},  // neon blue
+  { 116, 172,   0},  // puke green
+  { 223, 153,   0},  // yellow
+  { 212,  41,  66},  // hot pink
+  { 149, 106, 222},  // purnurple
 };
 
-int currIndex = 0;
-float currIndexTime = 0;
-int timer = 0;
+int backgroundColorIndex = 0;
+float backgroundSwitchTime = 0;
 
 static public void main(String args[]) {
   String[] customArgs = new String[] { "--sketch-path=" + sketchDirectory, "--full-screen", "--bgcolor=#000000", "--hide-stop", "ILikeToMoveIt" };
@@ -73,7 +82,7 @@ boolean sketchFullScreen() {
 }
 
 
-PImage createShilouetteImage() {
+PImage createStaticSilhouetteImage() {
   background(0);
 
   for (int i=0; i < numDots; i++) {
@@ -96,22 +105,20 @@ void setup() {
 
   noCursor();
 
-  currIndexTime = getRandomTime(5000, 15000);
-
   imgLogo = requestImage("logo-white.png", "png");
 
   audVis = new AudioVisualization();
-  newImg = new PImage(kinectWidth, kinectHeight);
-  img = new PImage(width, height);
+  imgKinectDepth = new PImage(kinectWidth, kinectHeight);
+  imgDepthFrameGeneration = new PImage(kinectWidth, kinectHeight);
   minim = new Minim(this);
 
-  player = minim.loadFile("song.mp3", 512);
+  player = minim.loadFile("song.mp3", 16*1024);
   player.play();
   fft = new FFT(player.bufferSize(), player.sampleRate());
 
   f = createFont("Helvetica", 64, true);
 
-  img = createShilouetteImage();
+  imgSilhouetteBackground = createStaticSilhouetteImage();
 
   captureMode = -1;
 }
@@ -184,45 +191,94 @@ int getCurrentCaptureMode(){
 }
 
 
+PImage genNeonOverlayImageFromKinect(int ntracers){
+  PImage newImage = new PImage(kinectWidth, kinectHeight);
 
-void draw() {
-  background(img);
-  audVis.draw();
+  newImage.loadPixels();
+  imgKinectDepth.loadPixels();
+  imgDepthFrameGeneration.loadPixels();
   kinect.update();
 
-  loadPixels();
+  int[] dep_pix = imgKinectDepth.pixels;
+  int[] gen_pix = imgDepthFrameGeneration.pixels;
+  int[] img_pix = newImage.pixels;
+  int[] kin_pix = kinect.userMap();
 
-  int[] userVals = kinect.userMap();
-  if(userVals == null) return;
+  if(USER_DEPTH_MAX > 0) {
+    kin_pix = kinect.depthMap();
+  }
 
-  int[] imgpix = newImg.pixels;
+  // Dilate then erode to smooth
+  if(DILATE_ERODE > 0){
+    PImage tmp = dilate(kin_pix, 640, 480, DILATE_ERODE);
+    tmp = erode(tmp, DILATE_ERODE);
+    // todo: is this going to access free'd memory?
+    kin_pix = tmp.pixels;
+  }
 
   int idx;
   int val;
+  int gen;
+  float alpha;
+  int age;
   int maxidx = kinectWidth * kinectHeight;
-  color background = appleNeonColors[currIndex];
-  color pix;
+  color r = appleNeonColors[backgroundColorIndex][0];
+  color g = appleNeonColors[backgroundColorIndex][1];
+  color b = appleNeonColors[backgroundColorIndex][2];
+
+  float tracerFactor = 1.0 / ntracers;
 
   for (idx = 0; idx < maxidx; ++idx){
-    val = userVals[idx];
+    val = kin_pix[idx];
 
-    if (val != 0) {
-      pix = pixels[idx];
+    // If the depth value is 0, the kinect cannot resolve it
+    // so use the most recent good depth value
+    if(val == 0) {
+      val = dep_pix[idx];
+      gen = gen_pix[idx];
     } else {
-      pix = background;
+      // Otherwise record the good depth value
+      dep_pix[idx] = val;
+      gen = frameCount;
+      gen_pix[idx] = gen;
     }
 
-    imgpix[idx] = pix;
+    // how many frames ago did this depth value get recorded?
+    age = frameCount - gen;
+
+    if (age < ntracers && val > 0 && (USER_DEPTH_MAX == 0 || val < USER_DEPTH_MAX)) {
+      alpha = age * tracerFactor;
+      // saturate the alpha non-linerally
+      alpha = sin(age * tracerFactor * 1.57079633); // sin(alpha * pi/2))
+    } else {
+      alpha = 1.0;
+    }
+
+    img_pix[idx] = color(r,g,b,int(min(alpha, 1.0)*255.5));
   }
 
-  if (millis() - timer >= currIndexTime) {
-    currIndexTime = getRandomTime(5000, 10000);
-    currIndex = (currIndex+1) % appleNeonColors.length;
-    timer = millis();
-  }
+  newImage.updatePixels();
+  return newImage;
+}
 
-  newImg.updatePixels();
-  image(newImg, 0, 0, screenWidth, screenHeight);
+
+void checkAndUpdateBackgroundColor() {
+  if (millis() > backgroundSwitchTime) {
+    backgroundSwitchTime = millis() + getRandomTime(5000, 10000);
+    backgroundColorIndex = (backgroundColorIndex+1) % appleNeonColors.length;
+  }
+}
+
+
+
+void draw() {
+  background(imgSilhouetteBackground);
+  audVis.draw();
+
+  checkAndUpdateBackgroundColor();
+
+  PImage overlayImg = genNeonOverlayImageFromKinect(TRACER_COUNT);
+  blendImageCenter(overlayImg, 1.0);
 
 
   switch(getCurrentCaptureMode()){
@@ -261,11 +317,9 @@ void doScreenCapture() {
 
 
 color getTextcolor() {
-  color bg = appleNeonColors[currIndex];
-  int a = (bg>>24)&255;
-  int r = (bg>>16)&255;
-  int g = (bg>>8)&255;
-  int b = (bg>>0)&255;
+  int r = appleNeonColors[backgroundColorIndex][0];
+  int g = appleNeonColors[backgroundColorIndex][1];
+  int b = appleNeonColors[backgroundColorIndex][2];
   color textcolor = color(255 - r, 255 - g, 255 - b, 255);
   return textcolor;
 }
@@ -279,11 +333,22 @@ void displayMsgAndFrame(color textcolor, String msg, int frameWidth){
     rect(0, 0, width, height);
   }
 
+  int x = 50;
+  int y = 50;
   if(msg != ""){
     textFont(f,32);
+
+    stroke(0);
+    fill(0);
+    text(msg, x-1, y-1);
+    text(msg, x-1, y+1);
+    text(msg, x+1, y-1);
+    text(msg, x+1, y+1);
+
     stroke(textcolor);
     fill(textcolor);
-    text(msg, 50, 50);
+
+    text(msg, x, y);
   }
 }
 
